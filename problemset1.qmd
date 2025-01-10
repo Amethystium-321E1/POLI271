@@ -1,0 +1,76 @@
+---
+title: "Problem-Set-1 for POLI 271"
+format: pdf
+editor: visual
+---
+
+# 1. Univariate displays & sampling distributions
+
+## *Problem a*
+```{r, fig.width=7, fig.height=5}
+s_values <- c(10, 100, 1000)
+n_values <- c(10, 100, 1000)
+
+par(mfrow = c(3, 3))
+for (s in s_values) {
+  for (n in n_values) {
+    sample_means <- replicate(s, mean(sample(1:20, n, replace = TRUE)))
+
+    hist(sample_means,
+         breaks = 20,
+         col = "grey",
+         border = "black",
+         main = paste("s =", s, ", n =", n),
+         xlab = "",
+         xlim = c(1, 20))
+    
+    abline(v = mean(sample_means), col = "red", lwd = 0.5)
+  }
+}
+
+
+```
+## *Problem b*
+The histograms shows that when increasing the sample size reduces variability in sample means. I set it to 1:20 so it's getting closer to 10. And increasing the number of samples makes it look like normal distribution. The key assumption here is what CLT describes: the distribution of a normalized version of the sample mean converges to a standard normal distribution. 
+
+# 2. Monte Carlo integration
+
+```{r}
+func = function(x){exp(-x)*sin(x)}
+result = integrate(func, lower = 2, upper = 5)
+print(result)
+```
+# 3. Systematic and stochastic components
+
+## *Problem a*
+
+Systematic Component: $y_i=1+0.5x_{i1}-2.2x_{i2}+x_{i3}$
+Stochastic Component: ${\epsilon_i}\sim{N(\mu=0,\sigma^2=1.5)}$
+
+## *Problem b*
+**Part I.** The dimensions of $\mathbf{X}$ is denoted as $n$ is $2$. 
+```{r}
+data = read.csv("xmat.csv")
+print(dim(data))
+head(data, 10)
+```
+**Part II.**
+
+```{r}
+set.seed(10825) 
+# Why not 42 and 3407
+coefficient_0 = 1
+coefficient_1 = 0.5
+coefficient_2 = -2.2
+coefficient_3 = 1
+x_1 = data$X1
+x_2 = data$X2
+x_3 = data$X3
+e = rnorm(n = nrow(data), mean = 0, sd = sqrt(1.5))
+y = coefficient_0 + 
+  coefficient_1*x_1 + coefficient_2*x_2 + coefficient_3*x_3 + e
+
+linear = lm(y ~ x_1 + x_2 + x_3)
+summary((linear))
+```
+# 4. OLS in matrix form
