@@ -67,10 +67,15 @@ x_1 = data$X1
 x_2 = data$X2
 x_3 = data$X3
 e = rnorm(n = nrow(data), mean = 0, sd = sqrt(1.5))
-y = coefficient_0 + 
-  coefficient_1*x_1 + coefficient_2*x_2 + coefficient_3*x_3 + e
+y = coefficient_0 + coefficient_1*x_1 + coefficient_2*x_2 + coefficient_3*x_3 + e
 
 linear = lm(y ~ x_1 + x_2 + x_3)
 summary((linear))
+# Beautiful p-value
 ```
 # 4. OLS in matrix form
+
+data_2 = read_dta("")
+
+
+
