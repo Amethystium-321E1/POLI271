@@ -8,13 +8,13 @@ editor: visual
 
 ## *Problem a*
 ```{r, fig.width=7, fig.height=5}
-s_values <- c(10, 100, 1000)
-n_values <- c(10, 100, 1000)
+s_values = c(10, 100, 1000)
+n_values = c(10, 100, 1000)
 
 par(mfrow = c(3, 3))
 for (s in s_values) {
   for (n in n_values) {
-    sample_means <- replicate(s, mean(sample(1:20, n, replace = TRUE)))
+    sample_means = replicate(s, mean(sample(1:20, n, replace = TRUE)))
 
     hist(sample_means,
          breaks = 20,
@@ -75,7 +75,55 @@ summary((linear))
 ```
 # 4. OLS in matrix form
 
-data_2 = read_dta("")
+```{r}
+library(haven)
+data_2 = read_dta("coxappend.dta")
+attributes(data_2)
+```
+```{r}
+head(data_2, 10)
+```
+## *Problem a*
+
+```{r}
+print(attributes(data_2))
+```
+```{r}
+ols_regression = function(y, X) {
+  # Add intercept to X
+  X = cbind(1, X)
+  
+  # Calculate coefficients
+  XtX = t(X) %*% X
+  XtX_inv = solve(XtX)
+  XtY = t(X) %*% y
+  beta = XtX_inv %*% XtY
+  
+  # Calculate residuals
+  residuals = y - X %*% beta
+  
+  # Calculate variance
+  n = length(y)
+  k = ncol(X)
+  sigma2 = sum(residuals^2) / (n - k)
+  
+  # Standard errors
+  cov_matrix = sigma2 * XtX_inv
+  std_errors = sqrt(diag(cov_matrix))
+  
+  # Create a results table
+  results = data.frame(
+    Coefficient = as.vector(beta),
+    Std_Error = std_errors
+  )
+  rownames(results) = c("Intercept", paste0("Var", 1:(k - 1)))
+  
+  return(results)
+}
+
+
+```
+
 
 
 
