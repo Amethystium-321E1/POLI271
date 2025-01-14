@@ -86,44 +86,81 @@ head(data_2, 10)
 ## *Problem a*
 
 ```{r}
-print(attributes(data_2))
-```
-```{r}
 ols_regression = function(y, X) {
-  # Add intercept to X
   X = cbind(1, X)
   
-  # Calculate coefficients
-  XtX = t(X) %*% X
-  XtX_inv = solve(XtX)
-  XtY = t(X) %*% y
-  beta = XtX_inv %*% XtY
+  # beta_hat = (X'X)^(-1) X'y
+  beta_hat = solve(t(X) %*% X) %*% t(X) %*% y
   
-  # Calculate residuals
-  residuals = y - X %*% beta
+  # residuals = y - X * beta_hat
+  residuals = y - X %*% beta_hat
   
-  # Calculate variance
-  n = length(y)
-  k = ncol(X)
-  sigma2 = sum(residuals^2) / (n - k)
+  # sigma^2 = RSS / (n - p)
+  n = nrow(X)
+  p = ncol(X)
+  sigma2 = sum(residuals^2) / (n - p)
   
-  # Standard errors
-  cov_matrix = sigma2 * XtX_inv
-  std_errors = sqrt(diag(cov_matrix))
+  # SE(beta) = sqrt(diag(sigma^2 * (X'X)^(-1)))
+  se_beta = sqrt(diag(sigma2 * solve(t(X) %*% X)))
   
-  # Create a results table
-  results = data.frame(
-    Coefficient = as.vector(beta),
-    Std_Error = std_errors
-  )
-  rownames(results) = c("Intercept", paste0("Var", 1:(k - 1)))
-  
-  return(results)
+  return(list(
+    coefficients = beta_hat,
+    standard_errors = se_beta,
+    residuals = residuals
+  ))
 }
 
+y = data_2$enps
+X = data.frame(
+  eneth = data_2$eneth,
+  log_ml = log(data_2$ml),
+  interaction = data_2$eneth * log(data_2$ml)
+)
+
+results = ols_regression(y, as.matrix(X))
+
+print("OLS Results:")
+coefficients_table = data.frame(
+  Coefficient = results$coefficients,
+  Std_Error = results$standard_errors
+)
+rownames(coefficients_table) = c("Intercept", "eneth", "log_ml", "interaction")
+print(coefficients_table)
 
 ```
 
+## *Problem b*
 
+```{r}
+qq_plot = function(residuals) {
+  qqnorm(residuals, main = "Q-Q Plot of Residuals")
+  qqline(residuals, col = "purple", lwd = 2)
+}
 
+residuals = results$residuals
+qq_plot(residuals)
 
+```
+- The Q-Q plot shows that the residuals mostly align with the reference line. 
+- The deviations at the tails ndicates outliers in the residual distribution. 
+- Overall, the residuals are close to a normal distribution.
+
+## *Problem c*
+
+```{r}
+lm_model = lm(enps ~ eneth * log(ml), data = data_2)
+summary(lm_model)
+```
+## *Problem d*
+
+```{r}
+#| fig-width: 6
+#| fig-height: 6
+par(mfrow = c(2, 2))
+plot(lm_model)
+```
+The OLS model gives us some useful insights, but it’s not a perfect fit for the data. The patterns in the plots suggest the relationships might not be completely linear, the spread of the errors isn’t consistent, and a few points have a big influence on the results. 
+
+## **Appendix**
+
+I certify that we did not use any LLM or generative AI tool in this assignment. 
