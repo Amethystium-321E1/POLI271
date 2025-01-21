@@ -1,0 +1,170 @@
+---
+title: "Problem Set 2"
+format: pdf
+editor: visual
+---
+
+## 1. The exponential distribution
+
+### Problem a
+
+The support of $X$ is $x\ge0$
+
+### Problem b
+
+$L(\theta)={\prod_{i=1}^{n}}\theta{e}^{-\theta{x_i}}$ $\log{L({\theta}|x)} = n\log\theta-\theta\sum_{i=1}^{n}x_i$
+
+### Problem c
+
+Let $\frac{d}{d\theta}\log{L(\theta)}=\frac{n}{\theta}-\sum_{i=1}^{n} x_i = 0$ We have $\hat{\theta}=\frac{n}{\sum_{i=1}^{n} x_i}$
+
+### Problem d
+
+```{r}
+library(formatR)
+set.seed(5)
+x <- rexp(10000, 5)
+
+exp.ll = function(theta, x){
+  n = length(x)
+  return(n*log(theta) - theta*sum(x))
+}
+
+theta_seq = seq(1, 10, length.out = 100)
+log_log_vals = sapply(theta_seq, function(theta) exp.ll(theta, x))
+
+plot(theta_seq, log_log_vals, type="l", 
+     xlab="theta", ylab="Likelihood", col="purple", lwd=2)
+```
+
+It looks like around 5
+
+```{r}
+theta_tilde = 6
+theta_hat = length(x)/sum(x)
+
+ll_hat = exp.ll(theta_hat, x)
+ll_tilde = exp.ll(theta_tilde, x)
+
+likelihood_ratio = exp(exp.ll(theta_tilde, x) - exp.ll(theta_hat, x))
+
+print(likelihood_ratio)
+
+```
+
+```{r}
+log_likelihood = function(theta, x) {
+  n = length(x)
+  return(- (n*log(theta)-theta*sum(x)))
+}
+```
+
+```{r}
+start_time_BFGS = Sys.time()
+result_BFGS = optim(par=1, fn=log_likelihood, x=x, method="BFGS")
+end_time_BFGS = Sys.time()
+time_BFGS = end_time_BFGS - start_time_BFGS
+start_time_SANN = Sys.time()
+result_SANN = optim(par=1, fn=log_likelihood, x=x, method="SANN")
+end_time_SANN = Sys.time()
+time_SANN = end_time_SANN - start_time_SANN
+
+print(result_BFGS$par)
+print(result_SANN$par)
+print(time_BFGS)
+print(time_SANN)
+
+```
+
+## 2. Maximizing a multivariate function
+
+### Problem a
+
+```{r}
+mvn <- function(xy) {
+    x <- xy[1]
+    y <- xy[2]
+    z <- exp(-0.5 * ((x - 2)^2 + (y - 1)^2))
+    return(z)
+}
+
+# install.packages('lattice')
+library(lattice)
+
+y <- x <- seq(-5, 5, by = 0.1)
+grid <- expand.grid(x, y)
+names(grid) <- c("x", "y")
+grid$z <- apply(grid, 1, mvn)
+
+wireframe(z ~ x + y, data = grid, shade = TRUE, light.source = c(10, 0, 10), scales = list(arrows = FALSE))
+```
+
+It looks like when $x=0,y=0$ the function achieves a maximum.
+
+### Problem b
+
+```{r}
+neg_mvn <- function(xy) {
+    return(-mvn(xy))
+}
+
+opt1 <- optim(c(1, 0), neg_mvn, method = "BFGS")
+
+opt2 <- optim(c(5, 5), neg_mvn, method = "BFGS")
+
+data.frame(
+    Start_Point = c("(1,0)", "(5,5)"),
+    Optimum_X = c(opt1$par[1], opt2$par[1]),
+    Optimum_Y = c(opt1$par[2], opt2$par[2]),
+    Function_Value = c(-opt1$value, -opt2$value)
+)
+```
+
+The optimization starting from (5,5) did not converge to (2,1). The function value is very small, meaning that it has not reached the peak.
+
+```{r}
+y <- x <- seq(-5, 5, by = 0.1)
+grid <- expand.grid(x, y)
+names(grid) <- c("x", "y")
+grid$log_z <- apply(grid, 1, mvn)
+wireframe(log_z ~ x + y, data = grid, shade = TRUE, light.source = c(10, 0, 10), scales = list(arrows = FALSE))
+
+```
+
+### Problem c
+
+```{r}
+neg_log_mvn <- function(xy) {
+    return(-mvn(xy))
+}
+
+opt1_log <- optim(c(1, 0), neg_log_mvn, method = "BFGS")
+
+opt2_log <- optim(c(5, 5), neg_log_mvn, method = "BFGS")
+
+data.frame(
+    Start_Point = c("(1,0)", "(5,5)"),
+    Optimum_X = c(opt1_log$par[1], opt2_log$par[1]),
+    Optimum_Y = c(opt1_log$par[2], opt2_log$par[2]),
+    Log_Function_Value = c(-opt1_log$value, -opt2_log$value)
+)
+```
+
+Using log-likelihood improves numerical stability by preventing underflow and helps the optimizer converge faster by smoothing sharp variations. While function values change due to the logarithm, the optimal $(x,y)$ remains the same.
+
+## 3. The normal variance
+
+### Problem a
+
+$\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (X_i - \mu)^2$
+
+### Problem b
+
+- The **MLE for variance** is $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2$
+- The **MLE is biased**, as it systematically underestimates $\sigma^2$
+- The **unbiased estimator** is $s^2 = \frac{n}{n-1} \hat{\sigma}^2$
+
+## Appendix
+
+I certify that we did not use any LLM or generative AI tool in this assignment.
+**But I used WolframAlpha.**

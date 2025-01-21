@@ -7,6 +7,7 @@ editor: visual
 # 1. Univariate displays & sampling distributions
 
 ## *Problem a*
+
 ```{r, fig.width=7, fig.height=5}
 s_values = c(10, 100, 1000)
 n_values = c(10, 100, 1000)
@@ -30,8 +31,10 @@ for (s in s_values) {
 
 
 ```
+
 ## *Problem b*
-The histograms shows that when increasing the sample size reduces variability in sample means. I set it to 1:20 so it's getting closer to 10. And increasing the number of samples makes it look like normal distribution. The key assumption here is what CLT describes: the distribution of a normalized version of the sample mean converges to a standard normal distribution. 
+
+The histograms shows that when increasing the sample size reduces variability in sample means. I set it to 1:20 so it's getting closer to 10. And increasing the number of samples makes it look like normal distribution. The key assumption here is what CLT describes: the distribution of a normalized version of the sample mean converges to a standard normal distribution.
 
 # 2. Monte Carlo integration
 
@@ -40,20 +43,23 @@ func = function(x){exp(-x)*sin(x)}
 result = integrate(func, lower = 2, upper = 5)
 print(result)
 ```
+
 # 3. Systematic and stochastic components
 
 ## *Problem a*
 
-Systematic Component: $y_i=1+0.5x_{i1}-2.2x_{i2}+x_{i3}$
-Stochastic Component: ${\epsilon_i}\sim{N(\mu=0,\sigma^2=1.5)}$
+Systematic Component: $y_i=1+0.5x_{i1}-2.2x_{i2}+x_{i3}$ Stochastic Component: ${\epsilon_i}\sim{N(\mu=0,\sigma^2=1.5)}$
 
 ## *Problem b*
-**Part I.** The dimensions of $\mathbf{X}$ is denoted as $n$ is $2$. 
+
+**Part I.** The dimensions of $\mathbf{X}$ is denoted as $n$ is $2$.
+
 ```{r}
 data = read.csv("xmat.csv")
 print(dim(data))
 head(data, 10)
 ```
+
 **Part II.**
 
 ```{r}
@@ -73,6 +79,7 @@ linear = lm(y ~ x_1 + x_2 + x_3)
 summary((linear))
 # Beautiful p-value
 ```
+
 # 4. OLS in matrix form
 
 ```{r}
@@ -80,9 +87,11 @@ library(haven)
 data_2 = read_dta("coxappend.dta")
 attributes(data_2)
 ```
+
 ```{r}
 head(data_2, 10)
 ```
+
 ## *Problem a*
 
 ```{r}
@@ -141,9 +150,10 @@ residuals = results$residuals
 qq_plot(residuals)
 
 ```
-- The Q-Q plot shows that the residuals mostly align with the reference line. 
-- The deviations at the tails ndicates outliers in the residual distribution. 
-- Overall, the residuals are close to a normal distribution.
+
+-   The Q-Q plot shows that the residuals mostly align with the reference line.
+-   The deviations at the tails ndicates outliers in the residual distribution.
+-   Overall, the residuals are close to a normal distribution.
 
 ## *Problem c*
 
@@ -151,6 +161,7 @@ qq_plot(residuals)
 lm_model = lm(enps ~ eneth * log(ml), data = data_2)
 summary(lm_model)
 ```
+
 ## *Problem d*
 
 ```{r}
@@ -159,8 +170,9 @@ summary(lm_model)
 par(mfrow = c(2, 2))
 plot(lm_model)
 ```
-The OLS model gives us some useful insights, but it’s not a perfect fit for the data. The patterns in the plots suggest the relationships might not be completely linear, the spread of the errors isn’t consistent, and a few points have a big influence on the results. 
+
+The OLS model gives us some useful insights, but it’s not a perfect fit for the data. The patterns in the plots suggest the relationships might not be completely linear, the spread of the errors isn’t consistent, and a few points have a big influence on the results.
 
 ## **Appendix**
 
-I certify that we did not use any LLM or generative AI tool in this assignment. 
+I certify that we did not use any LLM or generative AI tool in this assignment.
