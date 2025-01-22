@@ -156,15 +156,28 @@ Using log-likelihood improves numerical stability by preventing underflow and he
 
 ### Problem a
 
+log normal distribution is:
+
+$\ell(\mu, \sigma^2) = -\frac{n}{2} \log(2\pi) - \frac{n}{2} \log \sigma^2 - \frac{1}{2\sigma^2} \sum_{i=1}^n (x_i - \mu)^2$.
+
+derivative:
+
+$\frac{\partial \ell}{\partial \sigma^2} = -\frac{n}{2\sigma^2} + \frac{1}{2\sigma^4} \sum_{i=1}^n (x_i - \mu)^2$.
+
+equal to zero:
+
+$-\frac{n}{2\sigma^2} + \frac{1}{2\sigma^4} \sum_{i=1}^n (x_i - \mu)^2 = 0$.
+
+then
+
 $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (X_i - \mu)^2$
 
 ### Problem b
 
-- The **MLE for variance** is $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2$
-- The **MLE is biased**, as it systematically underestimates $\sigma^2$
-- The **unbiased estimator** is $s^2 = \frac{n}{n-1} \hat{\sigma}^2$
+-   The **MLE for variance** is $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2$
+-   The **MLE is biased**, as it systematically underestimates $\sigma^2$
+-   The **unbiased estimator** is $s^2 = \frac{n}{n-1} \hat{\sigma}^2$
 
 ## Appendix
 
 I certify that we did not use any LLM or generative AI tool in this assignment.
-**But I used WolframAlpha.**
