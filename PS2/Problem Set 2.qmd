@@ -31,7 +31,7 @@ exp.ll = function(theta, x){
 }
 
 theta_seq = seq(1, 10, length.out = 100)
-log_log_vals = sapply(theta_seq, function(theta) exp.ll(theta, x))
+log_log_vals = sapply(theta_seq, exp.ll, x = x)
 
 plot(theta_seq, log_log_vals, type="l", 
      xlab="theta", ylab="Likelihood", col="purple", lwd=2)
@@ -41,18 +41,17 @@ It looks like around 5
 
 ```{r}
 theta_tilde = 6
-theta_hat = length(x)/sum(x)
+theta_hat = length(x) / sum(x)
 
 ll_hat = exp.ll(theta_hat, x)
 ll_tilde = exp.ll(theta_tilde, x)
 
-likelihood_ratio = exp(exp.ll(theta_tilde, x) - exp.ll(theta_hat, x))
-
+likelihood_ratio = exp(ll_hat - ll_tilde)
 print(likelihood_ratio)
-
 ```
 
 ```{r}
+
 log_likelihood = function(theta, x) {
   n = length(x)
   return(- (n*log(theta)-theta*sum(x)))
@@ -174,9 +173,54 @@ $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (X_i - \mu)^2$
 
 ### Problem b
 
--   The **MLE for variance** is $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2$
--   The **MLE is biased**, as it systematically underestimates $\sigma^2$
--   The **unbiased estimator** is $s^2 = \frac{n}{n-1} \hat{\sigma}^2$
+#### Step 1: MLE for Variance
+
+From Problem a, the maximum likelihood estimator (MLE) for variance is $\hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2$
+
+#### Step 2: Expected Value of $\hat{\sigma}^2$
+
+To check if $\hat{\sigma}^2$ is biased, take its expectation: $E[\hat{\sigma}^2] = E\left[ \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2\right]$
+ 
+By linearity of expectation: $E\left[\sum_{i=1}^{n} (x_i - \mu)^2 \right] = \sum_{i=1}^{n} E\left[ (x_i - \mu)^2 \right]$
+
+Since $x_i \sim \mathcal{N}(\mu, \sigma^2)$, we know $E\left[ (x_i - \mu)^2 \right] = \sigma^2$
+
+Thus, $E[\hat{\sigma}^2] = \frac{1}{n} \cdot n \sigma^2 = \sigma^2$
+
+This suggests that $\hat{\sigma}^2$ is an unbiased estimator **only if** $\mu$ is known.
+
+#### Step 3: Why is the MLE Biased?
+
+In practice, we do not know $\mu$ and instead estimate it with the **sample mean**: $\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$
+
+Using $\bar{x}$ instead of $\mu$, the variance estimator becomes $S^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \bar{x})^2$
+
+Taking expectation: $E[S^2] = \frac{1}{n} \sum_{i=1}^{n} E[(x_i - \bar{x})^2]$
+
+It can be shown that: $E[(x_i - \bar{x})^2] = \frac{n-1}{n} \sigma^2$
+
+which leads to: $E[S^2] = \frac{n-1}{n} \sigma^2$
+
+Since $E[S^2] \neq \sigma^2$, the MLE underestimates $\sigma^2$ by a factor of$\frac{n-1}{n}$.
+
+#### Step 4: Unbiased Estimator
+
+To correct the bias, we rescale $S^2$: $s^2 = \frac{n}{n-1} \hat{\sigma}^2$
+
+This gives the **unbiased variance estimator**:$s^2 = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2$
+
+which satisfies: $E[s^2] = \sigma^2$
+
+#### Final Answer:
+
+-   **MLE for variance**:
+    $$
+    \hat{\sigma}^2 = \frac{1}{n} \sum_{i=1}^{n} (x_i - \mu)^2
+    $$
+-   **MLE is biased**, underestimating $\sigma^2$ by a factor of $\frac{n-1}{n}$.
+-   **Unbiased estimator**:$s^2 = \frac{n}{n-1} \hat{\sigma}^2 = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2$
+
+This adjustment ensures an unbiased estimate of$\sigma^2$.
 
 ## Appendix
 
