@@ -1,0 +1,174 @@
+---
+title: "MLE Problem Set 3"
+author: "Pengjia Cui"
+format: pdf
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# **1. Binomial Likelihood**
+
+## **(a) Log-Likelihood Function**
+Given that $X \sim \text{Bin}(n, p)$, the probability mass function (PMF) is:
+
+$$
+P(X = x) = \binom{n}{x} p^x (1 - p)^{n - x}
+$$
+
+Taking the natural logarithm:
+
+$$
+\log \mathcal{L}(p) = \log \binom{n}{x} + x \log p + (n - x) \log (1 - p)
+$$
+
+Since the binomial coefficient $\binom{n}{x}$ does not depend on $p$, it is omitted in differentiation:
+
+$$
+\log \mathcal{L}(p) = x \log p + (n - x) \log (1 - p)
+$$
+
+---
+
+## **(b) Score Function**
+The **score function** is:
+
+$$
+S(p) = \frac{\partial}{\partial p} \log \mathcal{L}(p) = \frac{x}{p} - \frac{n - x}{1 - p}
+$$
+
+---
+
+## **(c) Maximum Likelihood Estimator (MLE)**
+Setting the score function to zero:
+
+$$
+\frac{x}{p} - \frac{n - x}{1 - p} = 0
+$$
+
+Solving for $p$:
+
+$$
+\hat{p} = \frac{x}{n}
+$$
+
+Thus, the **MLE of $p$** is:
+
+$$
+\hat{p} = \frac{x}{n}
+$$
+
+---
+
+## **(d) Observed Fisher Information**
+
+$$
+I(p) = -\frac{\partial S(p)}{\partial p} = \frac{x}{p^2} + \frac{n - x}{(1 - p)^2}
+$$
+
+Evaluating at $\hat{p}$:
+
+$$
+I(\hat{p}) = \frac{n}{\hat{p}(1 - \hat{p})}
+$$
+
+---
+
+## **(e) Relation to Bernoulli Variance**
+For a **Bernoulli** random variable $Y \sim \text{Bern}(p)$, the variance is:
+
+$$
+\text{Var}(Y) = p(1 - p)
+$$
+
+Thus, the Fisher information:
+
+$$
+I(p) = \frac{n}{p(1 - p)}
+$$
+
+is the **inverse of the Bernoulli variance scaled by $n$**.
+
+---
+
+# **2. Clinton Impeachment Vote**
+
+## **(a) Constructing the Binary Variable**
+```{r}
+impeach_data <- read.csv("impeach.csv", header = TRUE)
+
+# Remove rows with missing values
+impeach_data <- na.omit(impeach_data)
+
+# Define binary impeachment variable
+impeach_data$impch <- ifelse(impeach_data$votesum > 0, 1, 0)
+```
+
+---
+
+## **(b) Data Summary**
+```{r}
+summary(impeach_data)
+```
+
+---
+
+## **(c) Logistic Regression Model**
+```{r}
+model1 <- glm(impch ~ partyid + clint96, data = impeach_data, family = binomial)
+summary(model1)
+```
+
+---
+
+## **(d) Second Model Including Conservatism Measure**
+```{r}
+model2 <- glm(impch ~ partyid + clint96 + ccoal98, data = impeach_data, family = binomial)
+summary(model2)
+
+# Compare models using Likelihood Ratio Test
+lr_test <- 1 - pchisq(2 * (logLik(model2) - logLik(model1)), df = 1)
+lr_test
+```
+
+---
+
+## **(e) ROC Curve Comparison**
+```{r}
+library(pROC)
+
+# Ensure response and predictions have the same length
+predicted_prob1 <- predict(model1, type = "response")
+predicted_prob2 <- predict(model2, type = "response")
+
+roc1 <- roc(impeach_data$impch, predicted_prob1)
+roc2 <- roc(impeach_data$impch, predicted_prob2)
+
+plot(roc1, col = "blue", main = "ROC Curve Comparison", lwd = 2)
+lines(roc2, col = "red", lwd = 2)
+legend("bottomright", legend = c("Model 1", "Model 2"), col = c("blue", "red"), lty = 1, lwd = 2)
+```
+```{r}
+auc1 <- auc(roc1)
+auc2 <- auc(roc2)
+print(c(AUC_Model1 = auc1, AUC_Model2 = auc2))
+
+```
+```{r}
+roc_test <- roc.test(roc1, roc2)
+roc_test
+
+```
+
+---
+
+## **Conclusion**
+- The logistic regression results confirm **party affiliation** as the strongest predictor.
+- Clinton's vote share in a district also negatively correlates with impeachment support.
+- The likelihood ratio test assesses whether including conservatism improves model fit.
+- The ROC curve comparison evaluates the classification performance of both models.
+
+## Appendix
+I certify that we did not use any LLM or generative AI tool in this assignment.
+

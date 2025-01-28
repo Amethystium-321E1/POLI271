@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="John Ahlquist">
+<meta name="dcterms.date" content="2025-01-19">
+
+<title>MLE Problem Set 3</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="MLEps3_wi25_files/libs/clipboard/clipboard.min.js"></script>
+<script src="MLEps3_wi25_files/libs/quarto-html/quarto.js"></script>
+<script src="MLEps3_wi25_files/libs/quarto-html/popper.min.js"></script>
+<script src="MLEps3_wi25_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="MLEps3_wi25_files/libs/quarto-html/anchor.min.js"></script>
+<link href="MLEps3_wi25_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="MLEps3_wi25_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="MLEps3_wi25_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="MLEps3_wi25_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="MLEps3_wi25_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">MLE Problem Set 3</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>John Ahlquist </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">January 19, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="binomial-likelihood" class="level1">
+<h1>1. Binomial Likelihood</h1>
+<ol type="a">
+<li>If <span class="math inline">\(X \sim f_b(x; n,p)\)</span> derive the log-likelihood <strong>assuming <span class="math inline">\(n\)</span> is known</strong>. See p.&nbsp;6 of the text for a review of the binomial distribution.</li>
+</ol>
+<!---
+The log-likelihood of the binomial distribution is:
+\begin{eqnarray*}
+  \log\mathcal{L} &=& x\log p + (n-x)\log(1-p)
+\end{eqnarray*}
+--->
+<ol start="2" type="a">
+<li>Derive the score function for the likelihood in (a) <!---
+
+\begin{eqnarray*}
+  S(p) &=& \frac{\partial\log\mathcal{L}}{\partial p} = \frac{x}{p} - \frac{n-x}{1-p}
+\end{eqnarray*}
+---></li>
+<li>Derive an expression for the MLE, <span class="math inline">\(\hat{p}\)</span>.</li>
+</ol>
+<!---
+\begin{eqnarray*}
+  S(p) &=&\frac{x}{p} - \frac{n-x}{1-p}=0\\
+  &\Rightarrow& \hat{p} = \frac{x}{n}
+\end{eqnarray*}
+--->
+<ol start="4" type="a">
+<li><p>Derive the observed Fisher information for the likelihood in (a) <!---
+\begin{eqnarray*}
+  I(p) &=& -\frac{\partial S(p)}{\partial p} = \frac{x}{p^2} + \frac{n-x}{(1-p)^2}\\
+\end{eqnarray*}
+Evaluating this expression at the MLE, $\hat{p}$, and noting that $x=\hat{p}n$ yields
+\begin{eqnarray*}
+  I(p) &=& -\frac{\partial\logS(p)}{\partial p} = \frac{x}{p^2} + \frac{n-x}{(1-p)^2}\\
+  &=& \frac{\hat{p}n}{\hat{p}^2} + \frac{n-\hat{p}n}{(1-\hat{p})^2} = \frac{n}{\hat{p}(1-\hat{p})}
+\end{eqnarray*}
+---></p></li>
+<li><p>How does the expression in (d) relate to the variance of a Bernoulli random variable?<br>
+<!---
+It is the inverse of the Bernoulli variance scaled by the number of trials.
+---></p></li>
+</ol>
+</section>
+<section id="clinton-impeachment-vote" class="level1">
+<h1>2 Clinton Impeachment vote</h1>
+<p>For this exercise you will need to load the file <code>impeach.csv</code>, which records the votes of 435 members of the US House of Representatives over whether to impeach President Bill Clinton.</p>
+<ol type="a">
+<li>In <code>R</code>, construct a binary, numeric variable that encodes whether a member of Congress supported the Clinton impeachment. Note that there were four articles of impeachment, so you will need to decide how to use the four votes to construct a binary variable. You will also need to decide how to handle the two who did not vote. Call this variable <code>impch</code>.</li>
+</ol>
+<!---
+I fit four models using two different response variables.  This first variable, call it `impch.1`, is coded 1 if a Member voted for at least one of the four articles of impeachment and 0 otherwise.  The second, call it `\texttt{impch.all` is coded 1 if the Member voted for all four impeachment articles and 0 otherwise.  Note that both of these codings permit me to code as 0 the two Members who did not vote. In the code and results below, I used the ``cleaned'' data (i.e., NAs removed) to make comparisons across models clearer and the code a lot shorter. That said, it would not be difficult to take advantage of the coding to include more observations.
+--->
+<ol start="2" type="a">
+<li>Modify the code in the <code>binreg</code> function from p.&nbsp;53 to apply to the Clinton data and to take into account the gradient of the log likelihood function (see the expression on p.&nbsp;53). Note that the <code>optim()</code> function has an argument <code>gr</code> that will use the gradient function that you program in its hill-climbing algorithm.</li>
+</ol>
+<ol start="3" type="a">
+<li>Using the Clinton data and your modified <code>binreg</code> function, fit a logistic regression using <code>impch</code> as the response and the congressperson’s partisanship (<code>partyid</code>) and Clinton’s share of the 1996 2-party vote in the congressperson’s district (<code>clint96</code>) as predictors. Be sure that the function’s output includes the maximized log-likelihood. Present a table of coefficients and standard errors as derived from the <code>binreg</code> function. Also calculate and report the AIC and BIC for this model</li>
+</ol>
+<ol start="4" type="a">
+<li>Use <code>glm()</code> to confirm that your answer to part (c) is correct.</li>
+</ol>
+<ol start="5" type="a">
+<li>State the model you just fit in terms of a systematic and a stochastic component. What assumptions about independence does this model entail? Do you think it is reasonable? Answer in 3 or fewer sentences.</li>
+</ol>
+<!---
+
+Stochastic: $Y_{i} \sim Bernoulli(\pi_{i})$
+Systematic: $\pi_{i} = (1 + \mathrm{e}^{-X_{i}\beta})^{-1}$
+
+All observations are independent: $Y_{i} \perp Y_{j}$ for $i\neq j$, conditional on $X$.  In particular, this implies that each Congressperson's vote is indepednent of all others, given the predictors in our model.  Since we are conditioning on party and there is very little within-party variation in vote behavior, this may be ok.
+
+--->
+<ol start="6" type="a">
+<li>Construct a visual display that provides an interpretation of the model you estimated. Specifically, display the expected probability of voting for impeachment for Democrats and Republicans, conditional on Clinton’s vote share. Make sure your display accounts for estimation uncertainty.</li>
+</ol>
+<ol start="7" type="a">
+<li>Fit second, more complicated model by including one measure of conservatism (<code>ccoal</code> or <code>aflcio</code>). Display this model and the earlier one in a well-formatted regression table. Compare this second model to the simpler alternative using a likelihood ratio test (hint: use <code>1-pchisq()</code> and be careful about the number of observations). Then generate an ROC plot that compares a model including only party ID and Clinton vote share to one that also includes some measure of conservatism. What do you conclude about the relative in-sample performance of these two models?</li>
+</ol>
+<!---
+There's no evidence that including "ideology" variables adds anything to the simpler model using likelihood-based diagnostics.
+--->
+<!---
+The 2 models are nearly identical in their in-sample predictive performance.
+--->
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
