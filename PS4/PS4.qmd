@@ -1,0 +1,185 @@
+---
+title: "POLI 271 Problem set 4"
+format: pdf
+editor: visual
+---
+
+# POLI 271 Problem set 4
+
+## Problem 1
+
+### a
+
+```{r}
+library(tidyverse)
+library(gt)
+library(modelsummary)
+library(stargazer)
+library(ROCR)
+library(caret)
+library(cvTools)
+library(MASS)
+```
+
+
+```{r}
+flmdw <- read.csv("flmdw-1.csv")
+head(flmdw, 20)
+```
+```{r}
+library(ggplot2)
+ggplot(flmdw, aes(x = factor(onset))) +
+  geom_bar(fill = c("violet", "purple")) +
+  labs(title = "Distribution of Civil War Onset",
+       x = "Civil War Onset",
+       y = "Count") +
+  scale_x_discrete(labels = c("No Onset", "Onset")) +
+  theme_minimal()
+
+```
+This is a rare event. Bayesian Logistic Regression; LASSO
+
+## b
+
+```{r}
+library(dplyr)
+colnames(flmdw)
+flmdw_complete <- flmdw %>%
+  dplyr::select(onset, gdpenl, lpopl1, lmtnest, Oil, polity2l, relfrac) %>%
+  na.omit()
+
+model1 <- glm(onset ~ gdpenl + lpopl1 + lmtnest, 
+              data = flmdw_complete, family = binomial)
+model2 <- glm(onset ~ gdpenl + lpopl1 + lmtnest, 
+              data = flmdw_complete, family = binomial(link = "probit"))
+model3 <- glm(onset ~ gdpenl + lpopl1 + lmtnest + Oil + polity2l + relfrac, 
+              data = flmdw_complete, family = binomial(link = "probit"))
+model4 <- glm(onset ~ gdpenl + lpopl1 + lmtnest + Oil + polity2l * relfrac, 
+              data = flmdw_complete, family = binomial(link = "probit"))
+
+summary(model1)
+summary(model2)
+summary(model3)
+summary(model4)
+
+
+```
+## c
+
+```{r}
+pred1 <- prediction(predict(model1, type = "response"), flmdw_complete$onset)
+roc1 <- performance(pred1, "tpr", "fpr")
+
+pred2 <- prediction(predict(model2, type = "response"), flmdw_complete$onset)
+roc2 <- performance(pred2, "tpr", "fpr")
+
+pred3 <- prediction(predict(model3, type = "response"), flmdw_complete$onset)
+roc3 <- performance(pred3, "tpr", "fpr")
+
+pred4 <- prediction(predict(model4, type = "response"), flmdw_complete$onset)
+roc4 <- performance(pred4, "tpr", "fpr")
+
+plot(roc1, col = "blue", main = "AUC")
+plot(roc2, col = "red", add = TRUE)
+plot(roc3, col = "green", add = TRUE)
+plot(roc4, col = "purple", add = TRUE)
+legend("bottomright", legend = c("Model 1", "Model 2", "Model 3", "Model 4"),
+       col = c("blue", "red", "green", "purple"), lty = 1)
+
+plot(sort(predict(model1, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model1, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 1")
+plot(sort(predict(model2, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model2, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 2")
+plot(sort(predict(model3, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model3, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 3")
+plot(sort(predict(model4, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model4, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 4")
+
+
+
+
+```
+## d
+
+```{r}
+model_restricted <- glm(onset ~ gdpenl + lpopl1 + lmtnest + Oil + relfrac, 
+                        data = flmdw_complete, family = binomial(link = "probit"))
+
+lr_test <- anova(model_restricted, model4, test = "Chisq")
+
+print(lr_test)
+
+```
+The p-value (0.02528) is less than 0.05, meaning we reject the null hypothesis that $β_{dem} = β_{demfrac}$ = 0
+
+## e
+
+```{r}
+library(caret)
+library(pROC)
+
+set.seed(3407)
+
+flmdw_complete$onset <- factor(flmdw_complete$onset, levels = c(0,1), labels = c("No", "Yes"))
+
+cv_control <- trainControl(method = "cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+cv_model1 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil + relfrac, 
+                   data = flmdw_complete, method = "glm", family = binomial, 
+                   trControl = cv_control, metric = "ROC")
+
+cv_model2 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil + polity2l * relfrac, 
+                   data = flmdw_complete, method = "glm", family = binomial, 
+                   trControl = cv_control, metric = "ROC")
+
+prob1 <- predict(cv_model1, flmdw_complete, type = "prob")[,"Yes"]
+prob2 <- predict(cv_model2, flmdw_complete, type = "prob")[,"Yes"]
+
+roc1 <- roc(flmdw_complete$onset, prob1)
+roc2 <- roc(flmdw_complete$onset, prob2)
+
+plot(roc1, col = "blue", main = "10-Fold")
+lines(roc2, col = "red")
+legend("bottomright", legend = c("Model 1", "Model 2"), col = c("blue", "red"), lty = 1)
+
+auc(roc1)
+auc(roc2)
+```
+## f
+
+```{r}
+prediction_data <- expand.grid(
+  polity2l = seq(min(flmdw_complete$polity2l), max(flmdw_complete$polity2l), length.out = 100),
+  relfrac = mean(flmdw_complete$relfrac),
+  gdpenl = mean(flmdw_complete$gdpenl),
+  lpopl1 = mean(flmdw_complete$lpopl1),
+  lmtnest = mean(flmdw_complete$lmtnest),
+  Oil = 0
+)
+
+prediction_data$predicted <- predict(cv_model2, newdata = prediction_data, type = "prob")[,"Yes"]
+
+ggplot(prediction_data, aes(x = polity2l, y = predicted)) +
+  geom_line(color = "blue") +
+  labs(title = "PredictedOnset by Democracy Level",
+       x = "Polity Score (Democracy Level)", 
+       y = "Predicted Probability") +
+  theme_minimal()
+```
+```{r}
+interaction_data <- expand.grid(
+  polity2l = seq(min(flmdw_complete$polity2l), max(flmdw_complete$polity2l), length.out = 100),
+  relfrac = c(0.1, 0.5, 0.9),
+  gdpenl = mean(flmdw_complete$gdpenl),
+  lpopl1 = mean(flmdw_complete$lpopl1),
+  lmtnest = mean(flmdw_complete$lmtnest),
+  Oil = 0
+)
+
+interaction_data$predicted <- predict(cv_model2, newdata = interaction_data, type = "prob")[,"Yes"]
+
+ggplot(interaction_data, aes(x = polity2l, y = predicted, color = factor(relfrac))) +
+  geom_line() +
+  labs(title = "Interaction Effect of Democracy and Religious Fractionalization",
+       x = "Polity Score", 
+       y = "Predicted Probability of Civil War Onset",
+       color = "Religious Fractionalization") +
+  theme_minimal()
+```
+
