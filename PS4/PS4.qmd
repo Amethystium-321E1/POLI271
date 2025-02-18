@@ -19,6 +19,8 @@ library(ROCR)
 library(caret)
 library(cvTools)
 library(MASS)
+options(warn = -1)
+options(message = -1)
 ```
 
 
@@ -62,7 +64,48 @@ summary(model2)
 summary(model3)
 summary(model4)
 
+library(broom)
+glance(model1)
+glance(model2)
+glance(model3)
+glance(model4)
+```
+**Based on the results and AIC values, Model 4 is the most promising due to its lower AIC and inclusion of interaction effects, which likely capture more nuanced relationships between variables.**
 
+```{r}
+library(broom)
+library(gt)
+
+model_summaries <- bind_rows(
+  tidy(model1, conf.int = TRUE) %>% mutate(model = "Model 1"),
+  tidy(model2, conf.int = TRUE) %>% mutate(model = "Model 2"),
+  tidy(model3, conf.int = TRUE) %>% mutate(model = "Model 3"),
+  tidy(model4, conf.int = TRUE) %>% mutate(model = "Model 4")
+)
+
+gt_table <- gt(model_summaries) %>%
+  tab_header(
+    title = "Results of Logistic and Probit Regression Models"
+  ) %>%
+  fmt_number(
+    columns = vars(estimate, std.error, statistic, p.value, conf.low, conf.high),
+    decimals = 3
+  ) %>%
+  cols_label(
+    estimate = "Estimate",
+    std.error = "Std. Error",
+    statistic = "z value",
+    p.value = "P Value",
+    conf.low = "CI Low",
+    conf.high = "CI High",
+    term = "Term"
+  ) %>%
+  tab_spanner(
+    label = "Confidence Interval",
+    columns = vars(conf.low, conf.high)
+  )
+
+gtsave(gt_table, filename = "gt_table.pdf")
 ```
 ## c
 
@@ -79,21 +122,12 @@ roc3 <- performance(pred3, "tpr", "fpr")
 pred4 <- prediction(predict(model4, type = "response"), flmdw_complete$onset)
 roc4 <- performance(pred4, "tpr", "fpr")
 
-plot(roc1, col = "blue", main = "AUC")
+plot(roc1, col = "blue", main = "ROC Curves Comparison", xlim = c(0, 1), ylim = c(0, 1))
 plot(roc2, col = "red", add = TRUE)
 plot(roc3, col = "green", add = TRUE)
 plot(roc4, col = "purple", add = TRUE)
 legend("bottomright", legend = c("Model 1", "Model 2", "Model 3", "Model 4"),
        col = c("blue", "red", "green", "purple"), lty = 1)
-
-plot(sort(predict(model1, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model1, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 1")
-plot(sort(predict(model2, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model2, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 2")
-plot(sort(predict(model3, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model3, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 3")
-plot(sort(predict(model4, type = "response")), col = ifelse(flmdw_complete$onset[order(predict(model4, type = "response"))] == 1, "red", "black"), pch = "|", main = "Model 4")
-
-
-
-
 ```
 ## d
 
@@ -114,72 +148,72 @@ The p-value (0.02528) is less than 0.05, meaning we reject the null hypothesis t
 library(caret)
 library(pROC)
 
-set.seed(3407)
+set.seed(3407) # 3407 is all you need
 
 flmdw_complete$onset <- factor(flmdw_complete$onset, levels = c(0,1), labels = c("No", "Yes"))
 
 cv_control <- trainControl(method = "cv", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
 
-cv_model1 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil + relfrac, 
-                   data = flmdw_complete, method = "glm", family = binomial, 
+cv_model1 <- train(onset ~ gdpenl + lpopl1 + lmtnest, 
+                   data = flmdw_complete, method = "glm", family = binomial(), 
                    trControl = cv_control, metric = "ROC")
 
-cv_model2 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil + polity2l * relfrac, 
-                   data = flmdw_complete, method = "glm", family = binomial, 
+cv_model2 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil, 
+                   data = flmdw_complete, method = "glm", family = binomial(), 
+                   trControl = cv_control, metric = "ROC")
+
+cv_model3 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil + polity2l + relfrac, 
+                   data = flmdw_complete, method = "glm", family = binomial(link = "probit"), 
+                   trControl = cv_control, metric = "ROC")
+
+cv_model4 <- train(onset ~ gdpenl + lpopl1 + lmtnest + Oil + polity2l * relfrac, 
+                   data = flmdw_complete, method = "glm", family = binomial(link = "probit"), 
                    trControl = cv_control, metric = "ROC")
 
 prob1 <- predict(cv_model1, flmdw_complete, type = "prob")[,"Yes"]
 prob2 <- predict(cv_model2, flmdw_complete, type = "prob")[,"Yes"]
+prob3 <- predict(cv_model3, flmdw_complete, type = "prob")[,"Yes"]
+prob4 <- predict(cv_model4, flmdw_complete, type = "prob")[,"Yes"]
 
 roc1 <- roc(flmdw_complete$onset, prob1)
 roc2 <- roc(flmdw_complete$onset, prob2)
+roc3 <- roc(flmdw_complete$onset, prob3)
+roc4 <- roc(flmdw_complete$onset, prob4)
 
-plot(roc1, col = "blue", main = "10-Fold")
+plot(roc1, col = "blue", main = "10-Fold Cross-Validation ROC")
 lines(roc2, col = "red")
-legend("bottomright", legend = c("Model 1", "Model 2"), col = c("blue", "red"), lty = 1)
-
+lines(roc3, col = "green")
+lines(roc4, col = "purple")
+legend("bottomright", legend = c("Model 1", "Model 2", "Model 3", "Model 4"),
+       col = c("blue", "red", "green", "purple"), lty = 1)
 auc(roc1)
 auc(roc2)
+auc(roc3)
+auc(roc4)
 ```
+**Clearly model4 has the highest AUC. Hard to reject this one. **
+
 ## f
 
 ```{r}
+# Prepare data for predictions
 prediction_data <- expand.grid(
-  polity2l = seq(min(flmdw_complete$polity2l), max(flmdw_complete$polity2l), length.out = 100),
-  relfrac = mean(flmdw_complete$relfrac),
-  gdpenl = mean(flmdw_complete$gdpenl),
-  lpopl1 = mean(flmdw_complete$lpopl1),
-  lmtnest = mean(flmdw_complete$lmtnest),
-  Oil = 0
-)
-
-prediction_data$predicted <- predict(cv_model2, newdata = prediction_data, type = "prob")[,"Yes"]
-
-ggplot(prediction_data, aes(x = polity2l, y = predicted)) +
-  geom_line(color = "blue") +
-  labs(title = "PredictedOnset by Democracy Level",
-       x = "Polity Score (Democracy Level)", 
-       y = "Predicted Probability") +
-  theme_minimal()
-```
-```{r}
-interaction_data <- expand.grid(
-  polity2l = seq(min(flmdw_complete$polity2l), max(flmdw_complete$polity2l), length.out = 100),
+  polity2l = seq(min(flmdw_complete$polity2l), max(flmdw_complete$polity2l), by = 1),
   relfrac = c(0.1, 0.5, 0.9),
-  gdpenl = mean(flmdw_complete$gdpenl),
+  gdpenl = mean(flmdw_complete$gdpenl), 
   lpopl1 = mean(flmdw_complete$lpopl1),
   lmtnest = mean(flmdw_complete$lmtnest),
-  Oil = 0
+  Oil = mean(flmdw_complete$Oil)
 )
 
-interaction_data$predicted <- predict(cv_model2, newdata = interaction_data, type = "prob")[,"Yes"]
+# Predict probabilities
+prediction_data$predicted_prob <- predict(cv_model4, newdata = prediction_data, type = "prob")[, "Yes"]
 
-ggplot(interaction_data, aes(x = polity2l, y = predicted, color = factor(relfrac))) +
+# Plotting
+ggplot(prediction_data, aes(x = polity2l, y = predicted_prob, color = factor(relfrac))) +
   geom_line() +
-  labs(title = "Interaction Effect of Democracy and Religious Fractionalization",
-       x = "Polity Score", 
-       y = "Predicted Probability of Civil War Onset",
-       color = "Religious Fractionalization") +
+  labs(x = "Democracy Index", y = "Probability of Civil War Onset") +
+  scale_color_brewer(palette = "Set1") +
   theme_minimal()
 ```
-
+The data suggest that while democracy is generally promoted as a means to prevent conflict, its effectiveness can vary significantly depending on the religious composition of a society. In highly diverse societies, the introduction of democracy should be handled with care, potentially supplemented by measures that promote intergroup dialogue and reconciliation to mitigate the risks of increased conflict.

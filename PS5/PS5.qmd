@@ -1,0 +1,321 @@
+---
+title: "PS5"
+format: pdf
+editor: visual
+author: Pengjia "Hari" Cui
+---
+## 1. factors and ordering.
+
+```{r}
+income<-ordered(c("Mid","High","Low")) 
+income 
+as.numeric(income)
+```
+The results of the code highlight how R handles ordered factors and their numeric representation. When the ordered() function is used without explicitly defining the order of levels, R assigns them based on alphabetical order. In this case, "High" is considered the lowest level, followed by "Low," and "Mid" as the highest. This can be seen in the output where the levels are displayed as High < Low < Mid—which doesn’t align with a natural income hierarchy.
+
+When the factor is converted to numeric values using as.numeric(income), R assigns numbers based on this ordering. Since "High" is the lowest in the assigned levels, it gets 1, "Low" gets 2, and "Mid" gets 3. This means the numeric representation does not reflect a typical income ranking where "Low" would be 1, "Mid" would be 2, and "High" would be 3.
+
+## 2. Ordered categorical responses.
+### a
+
+```{r}
+library(MASS)
+library(caret)
+library(stargazer)
+
+drury <- read.csv("drury_jpr_data.csv")
+
+drury$result <- ordered(drury$result, levels = c(1, 2, 3))
+
+drury$log_gnprat <- log(drury$gnprat)
+
+
+model1 <- polr(result ~ log_gnprat + trade + tarcst + cost + coop, 
+               data = drury, Hess = TRUE)
+
+
+model2 <- polr(result ~ log_gnprat + trade + tarcst, 
+               data = drury, Hess = TRUE)
+
+
+stargazer(model1, model2, type = "text",
+          title = "Ordered Logit Models of Sanction Success",
+          dep.var.labels = "Result (Ordered Outcome)",
+          covariate.labels = c("log(GNP Ratio)",
+                               "Trade",
+                               "Target GNP Cost",
+                               "Sender Cost",
+                               "Cooperative Relationship"),
+          omit.stat = c("LL", "ser", "f"))
+
+
+cat("Model 1 AIC:", AIC(model1), "\n")
+cat("Model 2 AIC:", AIC(model2), "\n")
+cat("Model 1 BIC:", BIC(model1), "\n")
+cat("Model 2 BIC:", BIC(model2), "\n")
+
+pred1_in <- predict(model1, newdata = drury, type = "class")
+pred2_in <- predict(model2, newdata = drury, type = "class")
+
+cat("\nIn-sample performance:\n")
+conf_m1_in <- confusionMatrix(pred1_in, drury$result)
+conf_m2_in <- confusionMatrix(pred2_in, drury$result)
+conf_m1_in
+conf_m2_in
+
+set.seed(123)
+train_idx <- createDataPartition(drury$result, p = 0.7, list = FALSE)
+train_data <- drury[train_idx, ]
+test_data  <- drury[-train_idx, ]
+
+m1_train <- polr(result ~ log_gnprat + trade + tarcst + cost + coop, 
+                 data = train_data, Hess = TRUE)
+m2_train <- polr(result ~ log_gnprat + trade + tarcst, 
+                 data = train_data, Hess = TRUE)
+
+pred1_out <- predict(m1_train, newdata = test_data, type = "class")
+pred2_out <- predict(m2_train, newdata = test_data, type = "class")
+
+
+cat("\nOut-of-sample performance:\n")
+conf_m1_out <- confusionMatrix(pred1_out, test_data$result)
+conf_m2_out <- confusionMatrix(pred2_out, test_data$result)
+conf_m1_out
+conf_m2_out
+```
+### b
+Quantity of interest:
+
+How does the probability of each result category change as log_gnprat moves from its minimum to maximum, holding other covariates at typical values (e.g., their medians)?
+
+
+```{r}
+typical_trade  <- median(drury$trade,   na.rm = TRUE)
+typical_tarcst <- median(drury$tarcst,  na.rm = TRUE)
+typical_cost   <- median(drury$cost,    na.rm = TRUE)
+typical_coop   <- as.integer(round(mean(drury$coop, na.rm = TRUE))) 
+
+lgnp_seq <- seq(
+  from = min(drury$log_gnprat, na.rm = TRUE),
+  to   = max(drury$log_gnprat, na.rm = TRUE),
+  length.out = 50
+)
+
+scenario_df <- data.frame(
+  log_gnprat = lgnp_seq,
+  trade      = typical_trade,
+  tarcst     = typical_tarcst,
+  cost       = typical_cost,
+  coop       = typical_coop
+)
+```
+
+```{r}
+coefs <- coef(model1)
+zeta  <- model1$zeta
+V     <- vcov(model1)
+est   <- c(coefs, zeta)
+```
+
+```{r}
+set.seed(3407)
+R <- 1000
+sim_draws <- mvrnorm(n = R, mu = est, Sigma = V)
+```
+
+```{r}
+inv_logit <- function(z) 1 / (1 + exp(-z))
+predict_cat_probs <- function(beta_vec, zeta_vec, x_row) {
+  xb <- sum(beta_vec * x_row)
+  p1 <- inv_logit(zeta_vec[1] - xb)
+  p2 <- inv_logit(zeta_vec[2] - xb) - p1
+  p3 <- 1 - inv_logit(zeta_vec[2] - xb)
+  c(p1 = p1, p2 = p2, p3 = p3)
+}
+
+```
+
+```{r}
+out_res <- data.frame(
+  log_gnprat = lgnp_seq,
+  p1_mean = NA, p1_lo = NA, p1_hi = NA,
+  p2_mean = NA, p2_lo = NA, p2_hi = NA,
+  p3_mean = NA, p3_lo = NA, p3_hi = NA
+)
+
+xvars <- names(coefs)
+
+for (i in seq_len(nrow(scenario_df))) {
+  x_row <- as.numeric(scenario_df[i, xvars])
+
+  p_store <- matrix(NA, nrow = R, ncol = 3)
+
+  for (r in seq_len(R)) {
+    betas_r <- sim_draws[r, 1:5]
+    zetas_r <- sim_draws[r, 6:7]
+
+    p_store[r, ] <- predict_cat_probs(betas_r, zetas_r, x_row)
+  }
+
+  # Summaries for each category
+  out_res$p1_mean[i] <- mean(p_store[,1])
+  out_res$p1_lo[i]   <- quantile(p_store[,1], 0.025)
+  out_res$p1_hi[i]   <- quantile(p_store[,1], 0.975)
+
+  out_res$p2_mean[i] <- mean(p_store[,2])
+  out_res$p2_lo[i]   <- quantile(p_store[,2], 0.025)
+  out_res$p2_hi[i]   <- quantile(p_store[,2], 0.975)
+
+  out_res$p3_mean[i] <- mean(p_store[,3])
+  out_res$p3_lo[i]   <- quantile(p_store[,3], 0.025)
+  out_res$p3_hi[i]   <- quantile(p_store[,3], 0.975)
+}
+
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(out_res, aes(x = log_gnprat, y = p3_mean)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = p3_lo, ymax = p3_hi), alpha = 0.2, fill = "blue") +
+  labs(
+    x = "log(GNP Ratio)",
+    y = "Predicted Probability of Result = 3",
+    title = "Effect of log(GNP Ratio) on Probability of Highest Sanction Success"
+  ) +
+  theme_minimal()
+
+```
+
+## c
+
+```{r}
+drury$result_numeric <- as.numeric(drury$result)
+
+ols_model <- lm(result_numeric ~ log_gnprat + trade + tarcst + cost + coop,
+                data = drury)
+
+summary(ols_model)
+
+```
+I'd say it's better. 
+
+## d
+
+```{r}
+library(nnet)
+drury$result_unordered <- factor(drury$result, ordered = FALSE)
+model_mn <- multinom(
+  result_unordered ~ log_gnprat + trade + tarcst + cost + coop,
+  data = drury
+)
+
+summary(model_mn)
+
+```
+
+```{r}
+library(brant)
+
+model_ordinal <- polr(
+  result ~ log_gnprat + trade + tarcst + cost + coop,
+  data = drury,
+  Hess = TRUE
+)
+
+brant_test <- brant(model_ordinal)
+brant_test
+
+```
+The ordered logit specification appears valid under this assumption.
+There is no strong evidence that one would need a more flexible approach.
+
+## e
+
+```{r}
+
+drury$result_mnl <- factor(drury$result, ordered = FALSE)
+
+mnl_model <- multinom(
+  result_mnl ~ log_gnprat + trade + tarcst + cost + coop,
+  data = drury
+)
+
+summary(mnl_model)
+
+```
+```{r}
+typical_trade  <- median(drury$trade,   na.rm = TRUE)
+typical_tarcst <- median(drury$tarcst,  na.rm = TRUE)
+typical_cost   <- median(drury$cost,    na.rm = TRUE)
+typical_coop   <- round(mean(drury$coop, na.rm = TRUE))
+
+log_gnprat_seq <- seq(
+  from = min(drury$log_gnprat, na.rm = TRUE),
+  to   = max(drury$log_gnprat, na.rm = TRUE),
+  length.out = 50
+)
+
+scenario_df <- data.frame(
+  log_gnprat = log_gnprat_seq,
+  trade      = typical_trade,
+  tarcst     = typical_tarcst,
+  cost       = typical_cost,
+  coop       = typical_coop
+)
+```
+
+```{r}
+set.seed(3407)
+R <- 200  
+N <- nrow(drury)
+
+boot_preds <- array(NA, dim = c(R, nrow(scenario_df), 3))
+
+for (r in seq_len(R)) {
+  idx <- sample.int(N, size = N, replace = TRUE)
+  mnl_boot <- multinom(
+    result_mnl ~ log_gnprat + trade + tarcst + cost + coop,
+    data = drury[idx, ]
+  )
+  p_mat <- predict(mnl_boot, newdata = scenario_df, type = "probs")
+  boot_preds[r, , ] <- p_mat
+}
+
+prob_mean <- apply(boot_preds, c(2,3), mean)
+prob_lo   <- apply(boot_preds, c(2,3), quantile, 0.025)
+prob_hi   <- apply(boot_preds, c(2,3), quantile, 0.975)
+
+library(dplyr)
+
+plot_df <- scenario_df %>%
+  mutate(
+
+    p1 = prob_mean[,1],
+    p1_lo = prob_lo[,1],
+    p1_hi = prob_hi[,1],
+
+    p2 = prob_mean[,2],
+    p2_lo = prob_lo[,2],
+    p2_hi = prob_hi[,2],
+
+    p3 = prob_mean[,3],
+    p3_lo = prob_lo[,3],
+    p3_hi = prob_hi[,3]
+  )
+```
+
+```{r}
+ggplot(plot_df, aes(x = log_gnprat, y = p3)) +
+  geom_line(color = "blue", size = 1) +
+  geom_ribbon(aes(ymin = p3_lo, ymax = p3_hi), alpha = 0.2, fill = "blue") +
+  labs(
+    x = "log(GNP Ratio)",
+    y = "Predicted Probability (Result = 3)",
+    title = "MNL Bootstrapped Predictions for Category 3"
+  ) +
+  theme_minimal()
+```
+
+The quantity of interest is how the predicted probabilities of each outcome (1, 2, or 3) shift as log_gnprat varies from its minimum to maximum, while other covariates remain at typical values. The multinomial logit assigns unique intercepts and slopes for each outcome category instead of assuming parallel regressions. This can produce more flexible probability curves across the range of log_gnprat. Bootstrap‐based confidence ribbons illustrate sampling variability in these predictions, with wider ribbons indicating greater uncertainty.
